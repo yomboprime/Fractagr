@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Fractagr</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+		<style>
+			body {
+				margin: 0px;
+				overflow: hidden;
+				background-color: black;
+			}
+		</style>
+
+	</head>
+
+	<body>
+
+		<script>
+
+			var width = 640;
+			var height = 480;
+
+			var lineRadius = 4;
+
+			var canvas = document.createElement( 'canvas' );
+			canvas.width = width;
+			canvas.height = height;
+			canvas.style.position = "absolute";
+			canvas.style.top = "0px";
+			canvas.style.left = "0px";
+			document.body.appendChild( canvas );
+			var ctx = canvas.getContext( '2d' );
+			ctx.imageSmoothingEnabled = false;
+
+			ctx.fillStyle = 'black';
+			ctx.fillRect( 0, 0, width, height );
+
+			ctx.strokeStyle = 'white';
+			ctx.fillStyle = 'white';
+			ctx.fillRect( 0, height * 0.9, width, height * 0.1 );
+			ctx.beginPath();
+			ctx.ellipse( width * 0.5, height * 0.8, width * 0.21, height * 0.14, Math.PI * 0.874, 0, Math.PI * 2 );
+			ctx.fill();
+
+			ctx.lineWidth = 2 * lineRadius;
+
+			var data = ctx.getImageData( 0, 0 , width, height );
+			var pixels = data.data;
+
+			function setPixel( x, y, rgb ) {
+
+				var p = 4 * ( Math.floor( x ) + Math.floor( y ) * width );
+
+				pixels[ p ] = rgb.r;
+				pixels[ p + 1 ] = rgb.g;
+				pixels[ p + 2 ] = rgb.b;
+				pixels[ p + 3 ] = 255;
+
+			}
+
+			function getPixel( x, y, rgb ) {
+
+				var p = 4 * ( Math.floor( x ) + Math.floor( y ) * width );
+
+				rgb.r = pixels[ p ];
+				rgb.g = pixels[ p + 1 ];
+				rgb.b = pixels[ p + 2 ];
+
+			}
+
+			function show() {
+
+				ctx.putImageData( data, 0, 0 );
+
+			}
+
+			var rainbowRSize = 994;
+			var rainbowGSize = 542;
+			var rainbowBSize = 1757;
+			var rainbowRPhase = 14;
+			var rainbowGPhase = 354;
+			var rainbowBPhase = 754;
+
+			function randColor( rgb ) {
+/*
+				rgb.r = Math.floor( 255 * ( Math.random() * 0.8 + 0.2 ) );
+				rgb.g = Math.floor( 255 * ( Math.random() * 0.8 + 0.2 ) );
+				rgb.b = Math.floor( 255 * ( Math.random() * 0.8 + 0.2 ) );
+*/
+
+				rgb.r = Math.floor( 255 * ( ( ( ( iteration + rainbowRPhase ) % rainbowRSize ) / rainbowRSize ) * 0.8 + 0.2 ) );
+				rgb.g = Math.floor( 255 * ( ( ( ( iteration + rainbowGPhase ) % rainbowGSize ) / rainbowGSize ) * 0.8 + 0.2 ) );
+				rgb.b = Math.floor( 255 * ( ( ( ( iteration + rainbowBPhase )  % rainbowBSize ) / rainbowBSize ) * 0.8 + 0.2 ) );
+
+			}
+
+			var rgb = {
+				r: 255,
+				g: 255,
+				b: 255
+			};
+
+			var rgbRead = {
+				r: 0,
+				g: 0,
+				b: 0
+			};
+
+			// Un-smooth image
+
+			for ( var j = 0; j < height; j ++ ) {
+
+				for ( var i = 0; i < width; i ++ ) {
+
+					getPixel( i, j, rgbRead );
+					if ( rgbRead.r !== 0 || rgbRead.g !== 0 || rgbRead.b !== 0 ) {
+
+						setPixel( i, j, rgb );
+
+					}
+				}
+
+			}
+
+			var painting = false;
+			var xMouse = 0;
+			var yMouse = 0;
+
+			canvas.addEventListener( 'mousedown', function ( evt ) {
+
+				painting = true;
+
+				xMouse = evt.clientX;
+				yMouse = evt.clientY;
+
+				show();
+
+				ctx.beginPath();
+				ctx.ellipse( xMouse, yMouse, lineRadius, lineRadius, 0, 0, Math.PI * 2 );
+				ctx.fill();
+
+
+				data = ctx.getImageData( 0, 0 , width, height );
+				pixels = data.data;
+
+			}, false );
+
+			canvas.addEventListener( 'mousemove', function ( evt ) {
+
+				if ( ! painting ) {
+
+					return;
+
+				}
+
+				show();
+
+				ctx.beginPath();
+				ctx.ellipse( xMouse, yMouse, lineRadius, lineRadius, 0, 0, Math.PI * 2 );
+				ctx.fill();
+
+				ctx.beginPath();
+				ctx.moveTo( xMouse, yMouse );
+				ctx.lineTo( evt.clientX, evt.clientY );
+				ctx.stroke();
+
+				xMouse = evt.clientX;
+				yMouse = evt.clientY;
+
+				data = ctx.getImageData( 0, 0 , width, height );
+				pixels = data.data;
+
+
+			}, false );
+
+			canvas.addEventListener( 'mouseup', function ( evt ) {
+
+				painting = false;
+
+				show();
+
+				ctx.beginPath();
+				ctx.ellipse( evt.clientX, evt.clientY, lineRadius, lineRadius, 0, 0, Math.PI * 2 );
+				ctx.fill();
+
+
+				data = ctx.getImageData( 0, 0 , width, height );
+				pixels = data.data;
+
+			}, false );
+
+			var iteration = 0;
+
+			animate();
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				randColor( rgb );
+
+				for ( var pixel = 0; pixel < 20; pixel++ ) {
+
+					var x = Math.random() * width;
+					var y = 0;
+
+					var xa = x;
+					var ya = y;
+
+					while ( true ) {
+
+						xa = x;
+						ya = y;
+
+						var destroy = false;
+
+						var prob = Math.random();
+						if ( prob < 0.3 ) {
+							x ++;
+						}
+						else if ( prob < 0.6 ) {
+							x --;
+						}
+						else if ( prob < 0.86 ) {
+							y ++;
+						}
+						else {
+							y --;
+						}
+
+						if ( x >= width ) {
+
+							x -= width;
+
+						}
+
+						if ( x < 0 ) {
+
+							x += width;
+
+						}
+
+						if ( y >= height ) {
+
+							destroy = true;
+
+						}
+
+						if ( y < 0 ) {
+
+							destroy = true;
+
+						}
+
+						if ( destroy ) {
+
+							break;
+
+						}
+
+						getPixel( x, y, rgbRead );
+						if ( rgbRead.r !== 0 || rgbRead.g !== 0 || rgbRead.b !== 0 ) {
+
+							setPixel( xa, ya, rgb );
+							break;
+
+						}
+
+					}
+
+				}
+
+				show();
+
+				iteration ++;
+
+				//console.log( "frame" );
+
+			}
+
+		</script>
+
+	</body>
+</html>
